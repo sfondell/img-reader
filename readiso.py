@@ -45,16 +45,16 @@ if __name__ == '__main__':
 	
 	# WRITE BINARYIO OBJECT HOLDING SQUASHFS.IMG TO AN ISO IN CWD
 	extracted_img.seek(0)
-	with open('squashfs.img', 'wb') as f:
+	with open('squashfs.iso', 'wb') as f:
 		shutil.copyfileobj(extracted_img, f)
 
-	# # CLOSE ORIGINAL BOOT.ISO
-	# iso.close()
+	# CLOSE ORIGINAL BOOT.ISO
+	iso.close()
 
-	# # OPEN SQUASHFS.ISO
-	# iso = pycdlib.PyCdlib()
-	# iso.open('squashfs.iso')
+	# OPEN SQUASHFS.ISO
+	iso = pycdlib.PyCdlib()
+	iso.open('squashfs.iso')
 
-	# # PRINT ALL FILE IDENTIFIERS IN ROOT DIRECTORY OF SQUASHFS.ISO
-	# for child in iso.list_children(iso_path='/'):
-	# 	print(child.file_identifier())
+	# PRINT ALL FILE IDENTIFIERS IN ROOT DIRECTORY OF SQUASHFS.ISO
+	for child in iso.list_children(iso_path='/'):
+		print(child.file_identifier())
