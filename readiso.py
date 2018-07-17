@@ -45,16 +45,28 @@ if __name__ == '__main__':
 	
 	# WRITE BINARYIO OBJECT HOLDING SQUASHFS.IMG TO AN ISO IN CWD
 	extracted_img.seek(0)
-	with open('squashfs.iso', 'wb') as f:
+	with open('squashfs.img', 'wb') as f:
 		shutil.copyfileobj(extracted_img, f)
 
 	# CLOSE ORIGINAL BOOT.ISO
 	iso.close()
 
-	# OPEN SQUASHFS.ISO
-	iso = pycdlib.PyCdlib()
-	iso.open('squashfs.iso')
+	# RUN TERMINAL COMMANDS TO MOUNT AS WE CAN'T OPEN SQUASHFS.IMG USING THIS LIBRARY
+	os.system('sudo losetup -d /dev/loop0')
+	os.system('sudo losetup -f /dev/loop0 squashfs.img')
+	os.system('sudo mount -o loop -t squashfs squashfs.img /mnt')
 
-	# PRINT ALL FILE IDENTIFIERS IN ROOT DIRECTORY OF SQUASHFS.ISO
-	for child in iso.list_children(iso_path='/'):
-		print(child.file_identifier())
+	# GET ORIGINAL DIRECTORY BEFORE WE CD AND MOVE ROOTFS.IMG BACK TO ORIGINAL WD
+	owd = os.getcwd()
+	os.chdir('/mnt/LiveOS/')
+	copy_str = 'cp rootfs.img ' + owd
+	os.system(copy_str)
+
+	# SWITCH BACK TO ORIGINAL DIRECTORY TO REMOVE SQUASHFS.IMG FROM MOUNT & MOUNT ROOTFS.IMG
+	os.chdir(owd)
+	os.system('sudo losetup -d /dev/loop0')
+	os.system('sudo losetup -f /dev/loop rootfs.img')
+	os.system('sudo mount -o loop -t squashfs rootfs.img /mnt')
+
+
+
