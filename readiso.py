@@ -1,6 +1,6 @@
 # Sophia Fondell
 # 7/11/18
-# A script that accepts an iso file as arg and prints out the image's filesystem
+# A script that searches an iso's filesystem for a specified executable file in usr/sbin
 
 import pycdlib
 import argparse
@@ -20,8 +20,9 @@ def build_path(img_name):
 
 
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description='Read the contents of an iso disk image.')
+	parser = argparse.ArgumentParser(description='Search a disk image\'s filesystem for a specified executable.')
 	parser.add_argument('image', metavar='img', type=str, help='an image to be read')
+	parser.add_argument('cmd', metavar='cmd', type=str, help='executable command/file to search for in iso file')
 	args = parser.parse_args()
 	path = build_path(args.image) # Is this necesary? Full path not needed if in cwd
 	
@@ -51,10 +52,8 @@ if __name__ == '__main__':
 	# CLOSE ORIGINAL BOOT.ISO
 	iso.close()
 
-	# RUN TERMINAL COMMANDS TO MOUNT AS WE CAN'T OPEN SQUASHFS.IMG USING THIS LIBRARY
-	os.system('sudo losetup -d /dev/loop0')
-	os.system('sudo losetup -f /dev/loop0 squashfs.img')
-	os.system('sudo mount -o loop -t squashfs squashfs.img /mnt')
+	# RUN COMMANDS TO MOUNT AS WE CAN'T OPEN SQUASHFS.IMG USING THIS LIBRARY
+	os.system('sudo mount -o loop squashfs.img /mnt')
 
 	# GET ORIGINAL DIRECTORY BEFORE WE CD AND MOVE ROOTFS.IMG BACK TO ORIGINAL WD
 	owd = os.getcwd()
@@ -64,9 +63,22 @@ if __name__ == '__main__':
 
 	# SWITCH BACK TO ORIGINAL DIRECTORY TO REMOVE SQUASHFS.IMG FROM MOUNT & MOUNT ROOTFS.IMG
 	os.chdir(owd)
-	os.system('sudo losetup -d /dev/loop0')
-	os.system('sudo losetup -f /dev/loop rootfs.img')
-	os.system('sudo mount -o loop -t squashfs rootfs.img /mnt')
+	os.system('sudo umount /mnt')
+	os.system('sudo mount -o loop rootfs.img /mnt')
+
+	# CHANGE DIRECTORY TO /MNT SO WE CAN LOOK AT THE ISO'S FILESYSTEM
+	os.chdir('/mnt')
+	sbin = os.listdir('/usr/sbin')
+	if (args.cmd in sbin):
+		print('%s is present in the specified iso: %s' % (args.cmd, args.image))
+	else:
+		print('ERROR: %s is missing from the specified iso: %s' % (args.cmd, args.image))
+
+	# UNMOUNT ROOTFS AND DELETE BOTH INTERMEDIATE IMG FILES
+	os.chdir(owd)
+	os.system('sudo umount /mnt')
+	os.remove('squashfs.img')
+	os.remove('rootfs.img')
 
 
 
