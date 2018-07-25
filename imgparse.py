@@ -43,14 +43,12 @@ def build_path(img_name):
 
 def mount(img_path):
 	'''A function to encapsulate mounting a disk image'''
-	mount_str = 'sudo mount -o loop ' + img_path + ' /mnt'
-	os.system(mount_str)
+	subprocess.run(['sudo', 'mount', '-o', 'loop', img_path, '/mnt'])
 	return '/mnt'
 
 def umount():
 	'''A function to encapsulate unmounting a disk image'''
-	umount_str = 'sudo umount /mnt'
-	os.system(umount_str)
+	subprocess.run(['sudo', 'umount', '/mnt'])
 
 def iter_files(rootdir):
 	'''A function to iterate through a specified param rootdir using os.walk'''
@@ -70,6 +68,21 @@ def get_packages(rootdir):
 	pkglist = pkgs.decode('utf-8').split('\\')
 	return pkglist
 
+def get_diskusage(rootdir):
+	'''A function that finds the total disk usage of each installed rpm and returns as a sorted 
+	list of tuples of package name and disk usage from most to least'''
+	pkglist = get_packages(rootdir)
+	pkgdict = {}
+	for i in pkglist:
+		pkgdict[i] = 0
+	for root, dirs, files in os.walk(rootdir):
+		for f in files:
+			pkg = subprocess.check_output(['rpm', '--root', '/mnt', '-qf', os.path.join(root, f)])
+			pkg = pkg.decode('utf-8')
+			pkgdict[pkg] += os.path.getsize(f)
+	sortedpkgs = [(i, pkgdict[i]) for i in sorted(pkgdict, key=pkgdict.get, reverse=True)]
+	return sortedpkgs[:25]
+
 def init_parser():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('liveiso', help='filename of live image to be parsed')
@@ -81,6 +94,8 @@ def init_parser():
 					help='list the given FILEGLOBS')
 	modes.add_argument('--list-pkgs', action='store_true',
 					help='list all packages installed in the image')
+	modes.add_argument('--list-usg', action='store_true',
+					help='list the disk usage of the 25 largest rpms installed in the iso')
 
 	return parser
 
@@ -89,22 +104,31 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	with MountedImage(args.liveiso) as live:
+		result = []
 		if args.list_all:
-			imgdata = list(iter_files(live.rootfs))
+			filenames = list(iter_files(live.rootfs))
+			result.append(filenames)
 		elif args.ls:
-			imgdata = list(iter_fileglobs(live.rootfs, args.ls))
+			filenames = list(iter_fileglobs(live.rootfs, args.ls))
+			result.append(filenames)
 		elif args.list_pkgs:
-			imgdata = get_packages(live.rootfs)
+			pkgs = get_packages(live.rootfs)
+			result.append(pkgs)
+		elif args.list_usg:
+			usg = get_diskusage(live.rootfs)
+			result.append(usg)
 		else:
 			# This should never be reached because of the parser object
 			pass
 
-		if len(imgdata) == 0:
+		if len(result[0]) == 0:
 			if (args.list_all or args.ls):
 				parser.error('no matching files found')
-			else:
+			elif args.list_pkgs:
 				parser.error('no matching packages found')
+			else:
+				parser.error('Could not find rpm disk image usage')
 
-		for f in imgdata:
+		for f in result[0]:
 			outf = f[len(live.rootfs):]
 			print(outf)
