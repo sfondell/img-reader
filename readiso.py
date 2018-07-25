@@ -80,8 +80,8 @@ if __name__ == '__main__':
 	# UNMOUNT ROOTFS AND DELETE BOTH INTERMEDIATE IMG FILES
 	os.chdir(owd)
 	os.system('sudo umount /mnt')
-	# os.remove('squashfs.img')
-	# os.remove('rootfs.img')
+	os.remove('squashfs.img')
+	os.remove('rootfs.img')
 
 
 
