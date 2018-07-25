@@ -1,6 +1,9 @@
-# Sophia Fondell
+# !/usr/bin/python3
+
 # 7/11/18
 # A script that searches an iso's filesystem for a specified executable file in usr/sbin
+# by extracting nested disk images from a starting iso file using pycdlib and then calling to
+# the system to mount and access image contents.
 
 import pycdlib
 import argparse
@@ -77,8 +80,8 @@ if __name__ == '__main__':
 	# UNMOUNT ROOTFS AND DELETE BOTH INTERMEDIATE IMG FILES
 	os.chdir(owd)
 	os.system('sudo umount /mnt')
-	os.remove('squashfs.img')
-	os.remove('rootfs.img')
+	# os.remove('squashfs.img')
+	# os.remove('rootfs.img')
 
 
 
