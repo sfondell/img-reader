@@ -5,17 +5,10 @@
 # 3. Search for specified file in all of iso filesystem
 # 4. Search for specified file in specified iso filesystem directory
 
-import pycdlib
 import argparse
 import os
-import shutil
 import glob
 import subprocess
-
-try:
-	from cStringIO import StringIO as BytesIO
-except ImportError:
-	from io import BytesIO
 
 class MountedImage(object):
 	'''A class to encapsulate the nested images in the boot.iso as one object with context manager methods'''
