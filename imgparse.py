@@ -9,6 +9,7 @@ import argparse
 import os
 import glob
 import subprocess
+from hurry.filesize import size
 
 class MountedImage(object):
 	'''A class to encapsulate the nested images in the boot.iso as one object with context manager methods'''
@@ -34,13 +35,6 @@ class MountedImage(object):
 			if mount is not None:
 				umount()
 
-
-def build_path(img_name):
-	'''A function to build the full path to the specified iso file'''
-	cwd = os.getcwd()
-	path = cwd + '/' + img_name
-	return path
-
 def mount(img_path):
 	'''A function to encapsulate mounting a disk image'''
 	subprocess.run(['sudo', 'mount', '-o', 'loop', img_path, '/mnt'])
@@ -65,7 +59,8 @@ def iter_fileglobs(rootdir, fileglobs):
 def get_packages(rootdir):
 	'''A function to return all of the packages installed in a disk image'''
 	pkgs = subprocess.check_output(['rpm', '--root', '/mnt', '-qa'])
-	pkglist = pkgs.decode('utf-8').split('\\')
+	pkgs = pkgs.decode('utf-8')
+	pkglist = pkgs.split("\n")
 	return pkglist
 
 def get_diskusage(rootdir):
@@ -77,9 +72,19 @@ def get_diskusage(rootdir):
 		pkgdict[i] = 0
 	for root, dirs, files in os.walk(rootdir):
 		for f in files:
-			pkg = subprocess.check_output(['rpm', '--root', '/mnt', '-qf', os.path.join(root, f)])
-			pkg = pkg.decode('utf-8')
-			pkgdict[pkg] += os.path.getsize(f)
+			try:
+				pkg = subprocess.check_output(['rpm', '--root', '/mnt', '-qf', os.path.join(root, f)[4:]], stderr=subprocess.DEVNULL)
+				pkg = pkg.decode('utf-8')[:-1]
+				if ("\n" in pkg):
+					lst = pkg.split("\n")
+					for i in lst:
+						pkgdict[i] += os.path.getsize(os.path.join(root, f))
+				else:
+					pkgdict[pkg] += os.path.getsize(os.path.join(root, f))
+			except Exception:
+				# The file is not owned by any specific package so we can ignore it
+				pass
+
 	sortedpkgs = [(i, pkgdict[i]) for i in sorted(pkgdict, key=pkgdict.get, reverse=True)]
 	return sortedpkgs[:25]
 
@@ -129,6 +134,12 @@ if __name__ == '__main__':
 			else:
 				parser.error('Could not find rpm disk image usage')
 
-		for f in result[0]:
-			outf = f[len(live.rootfs):]
-			print(outf)
+
+		if (args.list_usg):
+			print('\n25 largest installed packages\n###############################\n')
+			for tup in result[0]:
+				print(tup[0], ':', size(tup[1]))
+			print('\n###############################')
+		else:
+			for f in result[0]:
+				print(f)
